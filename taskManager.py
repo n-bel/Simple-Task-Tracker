@@ -7,19 +7,21 @@ def run_task_manager(command):
     command = command[1:]
     result = False
 
-    if len(command) >= 1 :
-
-        if instruction == "add" :
+    match instruction:
+        case "add" :
             result = add(command)
-        elif instruction == "update" :
+        case "update" :
             result = update(command)
-        elif instruction == "delete" :
+        case "delete" :
             result = delete(command)
-        else :
+        case "mark-in-progress":
+            result = status_update(command, "in-progress")
+        case "mark-done":
+            result = status_update(command, "done")
+        case "list":
+            result = list_tasks(command)
+        case _ :
             print("Command Unknow")
-
-    else :
-        print("Missing Information")
 
 
     if result :
@@ -45,6 +47,33 @@ def delete(command):
         return False
     else:
         return action_on_tasks("delete", command)
+
+def status_update(command, newStatus):
+    if len(command) < 1:
+        print("Missing Information")
+        return False
+    else:
+        command.append(newStatus)
+        return action_on_tasks("status update", command)
+
+def list_tasks(command):
+    try:
+        with open('Task_Manger.json', 'r') as fp:
+            tasks = json.load(fp)
+            if len(command) == 0:
+                pretty_print_task(tasks, None)
+            else:
+                if command[0] in ["done", "todo", "in-progress"]:
+                    pretty_print_task(tasks, command[0])
+                else :
+                    print("Unknown argument")
+                    return False
+
+        return True
+
+    except IOError:
+        print("No Tasks registered")
+        return False
 
 def get_time():
     time = datetime.now()
@@ -83,11 +112,16 @@ def action_on_tasks(action, information):
         with open('Task_Manger.json', 'r') as fp:
             tasks = json.load(fp)
             if identifier in tasks.keys():
-                if action == "update" :
-                    tasks[identifier]["description"] = information[1]
-                    tasks[identifier]["updatedAT"] = get_time()
-                elif action == "delete":
-                    tasks.pop(identifier)
+                match action:
+                    case "update" :
+                        tasks[identifier]["description"] = information[1]
+                        tasks[identifier]["updatedAT"] = get_time()
+                    case "delete":
+                        tasks.pop(identifier)
+                    case "status update":
+                        tasks[identifier]["status"] = information[1]
+                    case _:
+                        print("Action not recognised")
             else :
                 print("Task not found")
                 return False
@@ -101,6 +135,16 @@ def action_on_tasks(action, information):
     except IOError:
         print("No Tasks registered")
         return False
+
+def pretty_print_task(tasks, status):
+    for key in tasks.keys():
+        if status == tasks[key]["status"] or status is None :
+            print("\nID : ", key,
+                  "\nDescription : ", tasks[key]["description"],
+                  "\nStatus : ", tasks[key]["status"],
+                  "\nCreated at : ", tasks[key]["createdAT"],
+                  "\nUpdated at : ", tasks[key]["updatedAT"],
+                  "\n")
 
 
 if __name__ == '__main__':
